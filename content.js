@@ -57,7 +57,8 @@ function e(el) {
 
 
 class Downloader {
-    constructor() {
+    constructor(btn) {
+        this.btn = btn;
         this.imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
         this.ui = null;
         this.minImgSize = localStorage.getItem('minImgSize') ? parseInt(localStorage.getItem('minImgSize')) : 400;
@@ -90,6 +91,9 @@ class Downloader {
         this.closeTrigger = e('span').class('id-close')
             .html('&times;')
             .event('click', () => {
+                if (this.btn) {
+                    this.btn.removeAttribute("disabled");
+                }
                 this.ui.element.remove();
             });
         this.ui.append(this.closeTrigger.element);
@@ -131,14 +135,16 @@ class Downloader {
                 this.settingsOpened = true;
                 this.settingsUi.styles({ display: 'block' });
                 settingsTrigger.styles({ color: 'rgb(229, 45, 3)' });
+                this.overflowArea.styles({ height: 'calc(100% - 190px)' });
             } else {
                 this.settingsOpened = false;
                 this.settingsUi.styles({ display: 'none' });
                 settingsTrigger.styles({ color: '#333' });
+                this.overflowArea.styles({ height: 'calc(100% - 90px)' });
             }
         });
 
-        this.overflowArea = e('div').styles({ height: 'calc(100% - 46px)', marginTop: '16px', width: '100%', maxHeight: '400px', overflowY: 'auto', scrollbarWidth: 'thin' });
+        this.overflowArea = e('div').styles({ height: 'calc(100% - 90px)', marginTop: '16px', width: '100%', overflowY: 'auto', scrollbarWidth: 'thin' });
         this.imageArea = e('div').class('ui-images-area').styles(
             { display: 'flex', flexDirection: 'column' }
         );
@@ -218,15 +224,22 @@ class Downloader {
 
     async AllimageScan() {
         const images = document.querySelectorAll('img');
+        let i = 0;
         for (let img of images) {
-            const src = this.srcFilter(img.src);
+            i++;
+            const src = img.getAttribute('data-original') ||
+                img.getAttribute('data-org') ||
+                img.getAttribute('data-fullsize') ||
+                (img.hasAttribute('srcset') ? this.getLargestSrcFromSrcset(img.getAttribute('srcset')) : this.srcFilter(img.src));
+
             try {
                 const isImageLargeEnough = await this.checkImageDimensions(src, this.minImgSize);
                 if (isImageLargeEnough) {
                     this.ImagesUiObject.groups.all.styles({ 'display': 'block' });
                     let name = src.split('/').pop();
-                    let title = img.alt || img.title || name.replace('-', ' ');
-                    const exists = this.images.all.some(image => image.name === name);
+                    let title = this.mainTitle || img.alt || img.title || name.replace('-', ' ');
+                    title += '-' + i;
+                    const exists = this.images.all.some(image => image.src === src);
                     const imageObj = { src, name, title, size: isImageLargeEnough }
                     if (!exists) {
                         this.images.all.push(imageObj);
@@ -249,6 +262,8 @@ class Downloader {
             images = document.querySelectorAll('.detail-product-image .image-list img');
         } else if (window.location.href.includes('aliexpress.com')) {
             images = document.querySelectorAll('.pdp-info-left img');
+        } else if (window.location.href.includes('made-in-china.com')) {
+            images = document.querySelectorAll('.big-picture img');
         }
 
         await this.groupInner(images, obStr);
@@ -271,7 +286,11 @@ class Downloader {
         let i = 0;
         for (let img of images) {
             i++;
-            const src = this.srcFilter(img.src);
+            const src = img.getAttribute('data-original') ||
+                img.getAttribute('data-org') ||
+                img.getAttribute('data-fullsize') ||
+                (img.hasAttribute('srcset') ? this.getLargestSrcFromSrcset(img.getAttribute('srcset')) : this.srcFilter(img.src));
+
             try {
                 const isImageLargeEnough = await this.checkImageDimensions(src, this.minImgSize);
                 if (isImageLargeEnough) {
@@ -279,7 +298,7 @@ class Downloader {
                     let name = src.split('/').pop();
                     let title = this.mainTitle || img.alt || img.title || name.replace('-', ' ');
                     title += '-' + i;
-                    const exists = this.images[obStr].some(image => image.name === name);
+                    const exists = this.images[obStr].some(image => image.src === src);
                     const imageObj = { src, name, title, size: isImageLargeEnough }
                     if (!exists) {
                         this.images[obStr].push(imageObj);
@@ -297,7 +316,28 @@ class Downloader {
 
 
 
+    getLargestSrcFromSrcset(srcset) {
+        const sources = srcset.split(',').map(src => src.trim().split(' '));
+        let largestSrc = '';
+        let maxWidth = 0;
+
+        sources.forEach(source => {
+            const [url, size] = source;
+            const width = size ? parseInt(size.replace('w', '')) : 0;
+
+            if (width > maxWidth) {
+                maxWidth = width;
+                largestSrc = url;
+            }
+        });
+
+        return largestSrc;
+    };
+
     srcFilter(src) {
+        if (window.location.href.includes('facebook.com')) {
+            return src;
+        }
         const index = this.imageExtensions.findIndex(ext => src.toLowerCase().indexOf(ext) !== -1);
         if (index !== -1) {
             const extension = this.imageExtensions[index];
@@ -338,7 +378,7 @@ class Downloader {
     createImageElement = (image) => {
         const imgWrapper = e('div').class('id-image-wrap');
 
-        const checkbox = e('input').attr('type', 'checkbox').styles({ margin: '0 5px' });
+        const checkbox = e('input').attr('type', 'checkbox');
         checkbox.event('change', () => {
             image.selected = checkbox.element.checked;
             this.downloadCount.html(`${this.selectedCount()} image${this.selectedCount() > 1 ? "s" : ''}`);
@@ -466,6 +506,7 @@ class Downloader {
     }
 
     stringToSlug(str) {
+
         str = str.replace(/^\s+|\s+$/g, ''); // trim
         str = str.toLowerCase();
 
@@ -545,8 +586,8 @@ class Downloader {
 
                 const slug = this.stringToSlug(image.title);
                 const extension = image.name.split('.').pop(); // Get the file extension from image.name
-                //const finalString = `${slug}.${extension}`;
-                const finalString = image.name;
+                const finalString = `${slug}.${extension}`;
+                //const finalString = image.name;
 
                 folder.file(finalString, imageData, { base64: true });
             } catch (error) {
@@ -590,38 +631,10 @@ class Downloader {
     }
 }
 
-function idRunApp() {
-    let app = new Downloader();
+function idRunApp(btn) {
+    let app = new Downloader(btn);
     app.renderApp(document.body);
 }
-
-const downloadButton = e('button')
-    .styles({
-        position: 'fixed',
-        bottom: '85px',
-        right: '10px',
-        zIndex: '1000',
-        width: '35px',
-        height: '35px',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        border: '1px solid rgba(0, 0, 0, .2)',
-        borderRadius: '50%',
-        padding: '5px',
-        background: 'rgb(229, 45, 3)',
-        color: '#fff'
-    }).attr("title", "Download Images")
-    .event('click', function () {
-        idRunApp();
-    })
-    .renderTo(document.body);
-
-downloadButton.html(`
-        <svg xmlns="http://www.w3.org/2000/svg" style="stroke: #fff;" class="ionicon" viewBox="0 0 512 512">
-            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="48" d="M112 268l144 144 144-144M256 392V100"/>
-        </svg>
-    `);
 
 // Listen for messages from the background script
 // content.js
@@ -633,3 +646,89 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         idRunApp();
     }
 });
+
+// Add drag and drop functionality
+let isDragging = false;
+let offsetX, offsetY, idbleft, idbtop, idbupdatedPosition;
+
+// Create the download button
+const downloadButton = e('button').class('id-downloadButton').attr("title", "Download Images")
+    .event('click', function () {
+        downloadButton.attr("disabled", true);
+        idRunApp(downloadButton.element);
+    })
+    .renderTo(document.body);
+
+downloadButton.html(`
+    <svg xmlns="http://www.w3.org/2000/svg" style="stroke: #fff;" class="ionicon" viewBox="0 0 512 512">
+        <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="48" d="M112 268l144 144 144-144M256 392V100"/>
+    </svg>
+`);
+
+
+
+downloadButton.event('mousedown', (e) => {
+    isDragging = true;
+    offsetX = e.clientX - downloadButton.element.offsetLeft;
+    offsetY = e.clientY - downloadButton.element.offsetTop;
+    downloadButton.styles({ cursor: 'grabbing' });
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (isDragging) {
+        const buttonWidth = downloadButton.element.offsetWidth;
+        const buttonHeight = downloadButton.element.offsetHeight;
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+
+        idbleft = e.clientX - offsetX;
+        idbtop = e.clientY - offsetY;
+
+        console.log('Before boundary check:', { idbleft, idbtop });
+
+        // Ensure the button doesn't go out of screen bounds
+        if (idbleft < 0) idbleft = 0;
+        if (idbtop < 0) idbtop = 0;
+        if (idbleft + buttonWidth > windowWidth) idbleft = windowWidth - buttonWidth;
+        if (idbtop + buttonHeight > windowHeight) idbtop = windowHeight - buttonHeight;
+
+        console.log('After boundary check:', { idbleft, idbtop });
+
+        downloadButton.styles({ left: `${idbleft}px`, top: `${idbtop}px` });
+    }
+});
+
+document.addEventListener('mouseup', () => {
+    if (isDragging) {
+        isDragging = false;
+        downloadButton.styles({ cursor: 'grab' });
+
+        // Save the position to localStorage
+        localStorage.setItem('downloadButtonPosition', JSON.stringify({
+            left: idbleft,
+            top: idbtop
+        }));
+    }
+});
+
+// Retrieve the button's position from localStorage
+const savedPosition = JSON.parse(localStorage.getItem('downloadButtonPosition'));
+if (savedPosition) {
+    const buttonWidth = downloadButton.element.offsetWidth;
+    const buttonHeight = downloadButton.element.offsetHeight;
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+
+    let left = savedPosition.left;
+    let top = savedPosition.top;
+
+    // Ensure the saved position is within screen bounds
+    if (left < 0) left = 0;
+    if (top < 0) top = 0;
+    if (left + buttonWidth > windowWidth) left = windowWidth - buttonWidth;
+    if (top + buttonHeight > windowHeight) top = windowHeight - buttonHeight;
+
+    console.log('Loaded position:', { left, top });
+
+    downloadButton.styles({ left: `${left}px`, top: `${top}px` });
+}
