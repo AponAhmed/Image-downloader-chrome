@@ -1,3 +1,38 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
+
+.id-downloader-app * {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Roboto", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1.2;
+}
+
+.id-downloadButton {
+  position: fixed;
+  top: 100px;
+  left: calc(100% - 50px);
+  z-index: 9999999;
+  width: 35px;
+  height: 35px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  padding: 5px;
+  background: rgb(229, 45, 3);
+  color: rgb(255, 255, 255);
+  cursor: grab;
+
+}
+
+.id-downloadButton[disabled="true"] {
+  opacity: 0.2;
+}
+
 .id-close {
   position: absolute;
   right: 4px;
@@ -29,9 +64,9 @@ label.no-image-found {
   cursor: pointer;
 }
 
-.id-downloader-app,
-.id-downloader-apo-settings {
+.id-downloader-app {
   width: 350px;
+  height: calc(100% - 20px);
   position: fixed;
   right: 10px;
   bottom: 10px;
@@ -39,7 +74,7 @@ label.no-image-found {
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 4px;
   backdrop-filter: blur(15px);
-  z-index: 10000;
+  z-index: 99999999;
   padding: 4px 8px;
 }
 
@@ -163,16 +198,17 @@ span.id-rescan {
 .scan-loading {
   display: block;
   position: absolute;
-  left:0px;
+  left: 0px;
   margin: 0;
   top: 6px;
   width: 18px;
   height: 18px;
   display: none;
   animation: spin 2s linear infinite;
-  margin:0;
-  /* Apply the spinning animation */
+  margin: 0;
+  pointer-events: none;
 }
+
 
 @keyframes spin {
   0% {
