@@ -230,6 +230,8 @@ class Downloader {
             const src = img.getAttribute('data-original') ||
                 img.getAttribute('data-org') ||
                 img.getAttribute('data-fullsize') ||
+                img.getAttribute('data-old-hires') ||
+                img.getAttribute('data-fullscreen') ||
                 (img.hasAttribute('srcset') ? this.getLargestSrcFromSrcset(img.getAttribute('srcset')) : this.srcFilter(img.src));
 
             try {
@@ -264,8 +266,20 @@ class Downloader {
             images = document.querySelectorAll('.pdp-info-left img');
         } else if (window.location.href.includes('made-in-china.com')) {
             images = document.querySelectorAll('.big-picture img');
+            if (images.length == 0) {
+                images = document.querySelectorAll('.sr-proMainInfo-slide img');
+            }
+        } else if (window.location.href.includes('amazon.com')) {
+            await this.mouseOverEventTrigger()
+            images = document.querySelectorAll('#leftCol img');
+        } else if (window.location.href.includes('hm.com')) {
+            images = document.querySelectorAll('.column1 .sticky-candidate img');
+        } else {
+            images = document.querySelectorAll(
+                '.product-detail-images'
+            );
         }
-
+        //console.log(images);
         await this.groupInner(images, obStr);
     }
 
@@ -276,8 +290,11 @@ class Downloader {
             images = document.querySelectorAll('.layout-right img');
         } else if (window.location.href.includes('aliexpress.com')) {
             images = document.querySelectorAll('.pdp-info-right img');
+        } else if (window.location.href.includes('amazon.com')) {
+            images = document.querySelectorAll('#variation_color_name img');
         }
 
+        //console.log(images);
         await this.groupInner(images, obStr);
 
     }
@@ -289,8 +306,10 @@ class Downloader {
             const src = img.getAttribute('data-original') ||
                 img.getAttribute('data-org') ||
                 img.getAttribute('data-fullsize') ||
+                img.getAttribute('data-old-hires') ||
+                img.getAttribute('data-fullscreen') ||
                 (img.hasAttribute('srcset') ? this.getLargestSrcFromSrcset(img.getAttribute('srcset')) : this.srcFilter(img.src));
-
+            console.log(src);
             try {
                 const isImageLargeEnough = await this.checkImageDimensions(src, this.minImgSize);
                 if (isImageLargeEnough) {
@@ -314,6 +333,35 @@ class Downloader {
         }
     }
 
+    mouseOverEventTrigger() {
+        return new Promise((resolve) => {
+
+            let elements = document.querySelectorAll('.a-button-input');
+
+
+            // Create an array of promises that resolve after each mouseover event is dispatched
+            const promises = Array.from(elements).map(element => {
+                return new Promise((resolve) => {
+                    const event = new MouseEvent('mouseover', {
+                        view: window,
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    element.dispatchEvent(event);
+
+                    // Resolve the promise after a short delay to simulate processing time
+                    setTimeout(() => {
+                        resolve();
+                    }, 100); // Adjust the delay as needed
+                });
+            });
+
+            // Wait for all promises to resolve
+            Promise.all(promises).then(() => {
+                resolve();
+            });
+        });
+    }
 
 
     getLargestSrcFromSrcset(srcset) {
@@ -351,6 +399,7 @@ class Downloader {
             /\/\d+x\d+(\.\w+)$/i, // Matches patterns like /123x456.jpg
             /\/\d+x\d+_\w+(\.\w+)$/i, // Matches patterns like /123x456_image.jpg
             /\/\d+x\d+_\w+$/i, // Matches patterns like /123x456_image
+            /_.*?\.(\w{3,4})$/
         ];
 
         regexes.forEach(regex => {
