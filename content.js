@@ -260,23 +260,28 @@ class Downloader {
     async MainImage() {
         let obStr = 'MainImage';
         let images = [];
-        if (window.location.href.includes('alibaba.com')) {
+        if (window.location.href.includes('alibaba.')) {
             images = document.querySelectorAll('.detail-product-image .image-list img');
-        } else if (window.location.href.includes('aliexpress.com')) {
+        } else if (window.location.href.includes('aliexpress.')) {
             images = document.querySelectorAll('.pdp-info-left img');
-        } else if (window.location.href.includes('made-in-china.com')) {
+        } else if (window.location.href.includes('made-in-china.')) {
             images = document.querySelectorAll('.big-picture img');
             if (images.length == 0) {
                 images = document.querySelectorAll('.sr-proMainInfo-slide img');
             }
-        } else if (window.location.href.includes('amazon.com')) {
-            await this.mouseOverEventTrigger()
+        } else if (window.location.href.includes('amazon.')) {
+            let elements = document.querySelectorAll('.a-button-input');
+            await this.mouseOverEventTrigger(elements)
             images = document.querySelectorAll('#leftCol img');
-        } else if (window.location.href.includes('hm.com')) {
+        } else if (window.location.href.includes('hm.c')) {
             images = document.querySelectorAll('.column1 .sticky-candidate img');
+        }else if (window.location.href.includes('ebay.')) {
+            let elements = document.querySelectorAll('.x-photos-min-view button.image-treatment');
+            await this.mouseOverEventTrigger(elements)
+            images = document.querySelectorAll('.x-photos-min-view img');
         } else {
             images = document.querySelectorAll(
-                '.product-detail-images'
+                '.product-detail-images img, #o-carousel-product img, .flickity-viewport img'
             );
         }
         //console.log(images);
@@ -286,11 +291,11 @@ class Downloader {
     async VariantImageScan() {
         let obStr = 'VariantImage';
         let images = [];
-        if (window.location.href.includes('alibaba.com')) {
+        if (window.location.href.includes('alibaba.')) {
             images = document.querySelectorAll('.layout-right img');
-        } else if (window.location.href.includes('aliexpress.com')) {
+        } else if (window.location.href.includes('aliexpress.')) {
             images = document.querySelectorAll('.pdp-info-right img');
-        } else if (window.location.href.includes('amazon.com')) {
+        } else if (window.location.href.includes('amazon.')) {
             images = document.querySelectorAll('#variation_color_name img');
         }
 
@@ -333,12 +338,8 @@ class Downloader {
         }
     }
 
-    mouseOverEventTrigger() {
-        return new Promise((resolve) => {
-
-            let elements = document.querySelectorAll('.a-button-input');
-
-
+    mouseOverEventTrigger(elements) {
+        return new Promise((resolve) => {           
             // Create an array of promises that resolve after each mouseover event is dispatched
             const promises = Array.from(elements).map(element => {
                 return new Promise((resolve) => {
